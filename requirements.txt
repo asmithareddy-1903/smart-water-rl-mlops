@@ -1,0 +1,8 @@
+numpy
+pandas
+matplotlib
+pyyaml
+mlflow
+fastapi
+uvicorn
+pytest

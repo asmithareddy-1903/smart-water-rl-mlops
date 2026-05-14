@@ -1,0 +1,2 @@
+run_id,episodes,average_reward,best_reward,epsilon
+run_01,300,-3651.2466666666664,-616,0.066687659952224

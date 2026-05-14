@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+
+  smart-water-rl:
+
+    build: .
+
+    container_name: smart_water_rl
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - .:/app
