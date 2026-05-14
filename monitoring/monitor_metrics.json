@@ -1,0 +1,21 @@
+{
+    "system_status": "active",
+    "metrics": {
+        "average_water_shortage": 12.5,
+        "supply_efficiency": 91.3,
+        "pressure_balance_score": 88.7,
+        "max_queue_level": 24,
+        "water_distribution_fairness": 90.1
+    },
+    "alerts": {
+        "shortage_alert": false,
+        "pressure_drop_alert": false,
+        "distribution_failure": false
+    },
+    "monitoring_plan": {
+        "track_shortages": true,
+        "track_pressure_levels": true,
+        "track_distribution_balance": true,
+        "track_supply_efficiency": true
+    }
+}
