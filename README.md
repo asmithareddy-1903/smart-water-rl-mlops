@@ -160,13 +160,6 @@ smart-water-rl-mlops/
 
 Q-Learning Algorithm
 
-### Reason for Choosing Q-Learning
-
-Q-Learning was selected because:
-- The environment is discrete
-- State and action spaces are small
-- It is simple and effective for learning optimal policies
-
 ---
 
 # Environment Design
@@ -464,9 +457,3 @@ The system successfully:
 - Supports Docker deployment
 - Provides monitoring and API serving
 - Maintains reproducibility and version control
-
----
-
-# Authors
-
-BMSCE AI & ML Department
