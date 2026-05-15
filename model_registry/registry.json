@@ -1,0 +1,17 @@
+{
+    "models": [
+        {
+            "model_name": "policy_v1",
+            "version": "1.0",
+            "status": "archived",
+            "accuracy": 78.5
+        },
+
+        {
+            "model_name": "policy_v2_optimized",
+            "version": "2.0",
+            "status": "production",
+            "accuracy": 91.2
+        }
+    ]
+}
