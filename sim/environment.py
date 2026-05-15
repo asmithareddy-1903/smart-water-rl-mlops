@@ -12,11 +12,10 @@ ACTIONS = [
     [0, 15, 15]
 ]
 
-
 class WaterEnv:
 
     def __init__(self):
-
+        self.ACTIONS = ACTIONS
         self.reset()
 
     def reset(self):

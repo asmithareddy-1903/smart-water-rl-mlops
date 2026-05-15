@@ -1,144 +1,193 @@
 import os
-import csv
-import yaml
+import pickle
+import pandas as pd
 import mlflow
 
-from sim.environment import WaterEnv, ACTIONS
+from sim.environment import WaterEnv
 from agent.qlearning import QLearningAgent
-from agent.policy_utils import save_policy
+
+# =========================
+# CREATE REQUIRED FOLDERS
+# =========================
 
 os.makedirs("results", exist_ok=True)
 os.makedirs("policies", exist_ok=True)
 
-with open("configs/qlearning_v1.yaml") as f:
+# =========================
+# SET MLFLOW EXPERIMENT
+# =========================
 
-    config = yaml.safe_load(f)
+mlflow.set_tracking_uri("file:./mlruns")
 
-mlflow.set_experiment("Smart-Water-RL")
+experiment_name = "SmartWaterRL"
+
+mlflow.set_experiment(experiment_name)
+
+# =========================
+# INITIALIZE ENVIRONMENT
+# =========================
 
 env = WaterEnv()
 
+state = env.reset()
+
+state_size = len(state)
+
+action_size = len(env.ACTIONS)
+
+# =========================
+# INITIALIZE AGENT
+# =========================
+
 agent = QLearningAgent(
-    ACTIONS,
-    alpha=config["learning_rate"],
-    gamma=config["gamma"],
-    epsilon=config["epsilon"]
+    state_size,
+    action_size
 )
 
-rewards_per_episode = []
+# =========================
+# TRAINING SETTINGS
+# =========================
 
-with mlflow.start_run():
+episodes = 100
 
-    mlflow.log_params(config)
+episode_rewards = []
 
-    for ep in range(config["episodes"]):
+# =========================
+# START MLFLOW RUN
+# =========================
+
+with mlflow.start_run(run_name="Q_Learning_Training_Run"):
+
+    # ---------------------
+    # LOG PARAMETERS
+    # ---------------------
+
+    mlflow.log_param("Algorithm", "Q-Learning")
+    mlflow.log_param("Episodes", episodes)
+    mlflow.log_param("State_Size", state_size)
+    mlflow.log_param("Action_Size", action_size)
+
+    # =====================
+    # TRAINING LOOP
+    # =====================
+
+    for episode in range(episodes):
 
         state = env.reset()
 
+        done = False
+
         total_reward = 0
 
-        for step in range(config["steps_per_episode"]):
+        step_count = 0
 
-            action_idx = agent.choose_action(state)
+        while not done:
 
-            action = ACTIONS[action_idx]
+            # Choose action
+            action_index = agent.choose_action(state)
 
+            action = env.ACTIONS[action_index]
+
+            # Environment step
             next_state, reward = env.step(action)
 
-            agent.update(
+            # Learn
+            agent.learn(
                 state,
-                action_idx,
+                action_index,
                 reward,
                 next_state
             )
 
+            # Update state
             state = next_state
 
             total_reward += reward
 
-        rewards_per_episode.append(total_reward)
+            step_count += 1
+
+            # Stop condition
+            if step_count >= 50:
+                done = True
+
+        # Store reward
+        episode_rewards.append(total_reward)
+
+        # ---------------------
+        # LOG METRICS
+        # ---------------------
 
         mlflow.log_metric(
-            "reward",
+            "Episode_Reward",
             total_reward,
-            step=ep
+            step=episode
         )
 
-        agent.epsilon = max(
-            0.05,
-            agent.epsilon * 0.995
+        mlflow.log_metric(
+            "Steps",
+            step_count,
+            step=episode
         )
 
         print(
-            f"Episode {ep+1}: Reward = {total_reward}"
+            f"Episode {episode + 1} | "
+            f"Reward = {total_reward}"
         )
 
-    avg_reward = sum(rewards_per_episode) / len(rewards_per_episode)
+    # =====================
+    # SAVE RESULTS CSV
+    # =====================
 
-    best_reward = max(rewards_per_episode)
+    rewards_df = pd.DataFrame({
+        "episode": list(range(1, episodes + 1)),
+        "reward": episode_rewards
+    })
 
-    save_policy(
-        agent.q_table,
-        "policies/policy_v1.pkl"
+    rewards_csv_path = "results/episode_rewards.csv"
+
+    rewards_df.to_csv(
+        rewards_csv_path,
+        index=False
     )
 
-    save_policy(
-        agent.q_table,
-        "policies/policy_v2_optimized.pkl"
-    )
+    # =====================
+    # SAVE POLICY FILES
+    # =====================
 
-    with open(
-        "results/results.csv",
-        "w",
-        newline=""
-    ) as f:
+    policy_v1_path = "policies/policy_v1.pkl"
 
-        writer = csv.writer(f)
+    with open(policy_v1_path, "wb") as f:
+        pickle.dump(agent.q_table, f)
 
-        writer.writerow([
-            "run_id",
-            "episodes",
-            "average_reward",
-            "best_reward",
-            "epsilon"
-        ])
+    policy_v2_path = "policies/policy_v2_optimized.pkl"
 
-        writer.writerow([
-            "run_01",
-            config["episodes"],
-            avg_reward,
-            best_reward,
-            agent.epsilon
-        ])
+    with open(policy_v2_path, "wb") as f:
+        pickle.dump(agent.q_table, f)
 
-    with open(
-        "results/episode_rewards.csv",
-        "w",
-        newline=""
-    ) as f:
+    # =====================
+    # LOG ARTIFACTS
+    # =====================
 
-        writer = csv.writer(f)
+    mlflow.log_artifact(rewards_csv_path)
 
-        writer.writerow([
-            "episode",
-            "reward"
-        ])
+    mlflow.log_artifact(policy_v1_path)
 
-        for i, r in enumerate(rewards_per_episode):
+    mlflow.log_artifact(policy_v2_path)
 
-            writer.writerow([i+1, r])
+    # Log complete folders
+    mlflow.log_artifacts("results")
 
-    mlflow.log_metric(
-        "average_reward",
-        avg_reward
-    )
+    mlflow.log_artifacts("policies")
 
-    mlflow.log_metric(
-        "best_reward",
-        best_reward
-    )
+# =========================
+# FINAL OUTPUT
+# =========================
 
-    mlflow.log_artifact("results/results.csv")
-    mlflow.log_artifact("results/episode_rewards.csv")
+print("\n===================================")
+print("TRAINING COMPLETED SUCCESSFULLY")
+print("===================================")
 
-print("\nTraining Complete!")
+print("Rewards logged to MLflow")
+print("Policies saved")
+print("Artifacts uploaded")
+print("Experiment Name:", experiment_name)

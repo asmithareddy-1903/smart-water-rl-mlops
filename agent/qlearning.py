@@ -1,56 +1,58 @@
 import random
+import numpy as np
 
 
 class QLearningAgent:
 
     def __init__(
         self,
-        actions,
-        alpha=0.1,
-        gamma=0.95,
-        epsilon=0.3
+        state_size,
+        action_size,
+        learning_rate=0.1,
+        gamma=0.9,
+        epsilon=0.1
     ):
+
+        self.state_size = state_size
+
+        self.action_size = action_size
+
+        self.learning_rate = learning_rate
+
+        self.gamma = gamma
+
+        self.epsilon = epsilon
 
         self.q_table = {}
 
-        self.actions = actions
+    def get_q_value(self, state, action):
 
-        self.alpha = alpha
-        self.gamma = gamma
-        self.epsilon = epsilon
-
-    def get_q_values(self, state):
-
-        if state not in self.q_table:
-
-            self.q_table[state] = [0] * len(self.actions)
-
-        return self.q_table[state]
+        return self.q_table.get((state, action), 0.0)
 
     def choose_action(self, state):
 
-        if random.random() < self.epsilon:
+        if random.uniform(0, 1) < self.epsilon:
 
-            return random.randint(0, len(self.actions)-1)
+            return random.randint(0, self.action_size - 1)
 
-        q_values = self.get_q_values(state)
+        q_values = [
+            self.get_q_value(state, a)
+            for a in range(self.action_size)
+        ]
 
-        return q_values.index(max(q_values))
+        return int(np.argmax(q_values))
 
-    def update(
-        self,
-        state,
-        action,
-        reward,
-        next_state
-    ):
+    def learn(self, state, action, reward, next_state):
 
-        q_values = self.get_q_values(state)
+        old_q = self.get_q_value(state, action)
 
-        next_q_values = self.get_q_values(next_state)
+        future_q = max([
+            self.get_q_value(next_state, a)
+            for a in range(self.action_size)
+        ])
 
-        target = reward + self.gamma * max(next_q_values)
-
-        q_values[action] += self.alpha * (
-            target - q_values[action]
+        new_q = old_q + self.learning_rate * (
+            reward + self.gamma * future_q - old_q
         )
+
+        self.q_table[(state, action)] = new_q
